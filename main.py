@@ -9,22 +9,22 @@ tasks = [
 ]
 
 
-@app.get("/")
+@app.get("/", summary="API description")
 async def root():
     return {"name": "Task API", "version": "1.0", "endpoints": ["/tasks"]}
 
 
-@app.get("/health")
+@app.get("/health", summary="API health")
 async def health():
     return {"status": "ok"}
 
 
-@app.get("/tasks")
+@app.get("/tasks", summary="List all the tasks")
 async def list_tasks():
     return tasks
 
 
-@app.get("/tasks/{id}")
+@app.get("/tasks/{id}", summary="List a specific task by id")
 async def list_task(id: int):
     for task in tasks:
         if task["id"] == id:
@@ -32,7 +32,7 @@ async def list_task(id: int):
     return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
 
 
-@app.post("/tasks")
+@app.post("/tasks", summary="Create new tasks")
 async def create_task(title: str):
 
     if title is None or title == "":
@@ -49,7 +49,7 @@ async def create_task(title: str):
     return JSONResponse(status_code=201, content={"status": "done. New task added"})
 
 
-@app.put("/tasks/{id}")
+@app.put("/tasks/{id}", summary="update existing task")
 async def update_task(id: int, new_title: str | None = None, done: bool | None = None):
     if new_title is None and done is None:
         return JSONResponse(status_code=400, content={"error": "Empty Body"})
@@ -67,7 +67,7 @@ async def update_task(id: int, new_title: str | None = None, done: bool | None =
     return JSONResponse(status_code=404, content={"error": "unknown id"})
 
 
-@app.delete("/tasks/{id}")
+@app.delete("/tasks/{id}", summary="Delete task")
 async def delete_task(id: int):
     for task in tasks:
         if task["id"] == id:
