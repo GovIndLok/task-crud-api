@@ -47,3 +47,33 @@ async def create_task(title: str):
     tasks.append(new_task)
 
     return JSONResponse(status_code=201, content={"status": "done. New task added"})
+
+
+@app.put("/tasks/{id}")
+async def update_task(id: int, new_title: str | None = None, done: bool | None = None):
+    if new_title is None and done is None:
+        return JSONResponse(status_code=400, content={"error": "Empty Body"})
+
+    for task in tasks:
+        if task["id"] == id:
+            if new_title is not None and new_title != "":
+                task["title"] = new_title
+
+            if done is not None:
+                task["done"] = done
+
+            return task
+
+    return JSONResponse(status_code=404, content={"error": "unknown id"})
+
+
+@app.delete("/tasks/{id}")
+async def delete_task(id: int):
+    for task in tasks:
+        if task["id"] == id:
+            tasks.remove(task)
+            return JSONResponse(
+                status_code=204, content={"status": "task deleted successfully"}
+            )
+
+    return JSONResponse(status_code=404, content={"error": "Unknown id"})
