@@ -3,8 +3,7 @@ from dataclasses import field
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import JSONResponse
-from sqlmodel import Field, Session, SQLModel, create_engine, insert, select
+from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 
 class TaskBase(SQLModel, table=True):
@@ -16,6 +15,11 @@ class TaskBase(SQLModel, table=True):
 class TaskCreate(SQLModel):
     title: str | None = field(default=None)
     done: bool = Field(default=False)
+
+
+class taskUpdate(SQLModel):
+    title: str | None = field(default=None)
+    done: bool | None = field(default=None)
 
 
 sqlite_file_name = "tasks.db"
@@ -93,31 +97,29 @@ async def create_task(task: TaskCreate, session: SessionDeps):
     return db_task
 
 
-@app.put("/tasks/{id}", summary="update existing task")
-async def update_task(id: int, new_title: str | None = None, done: bool | None = None):
-    if new_title is None and done is None:
-        return JSONResponse(status_code=400, content={"error": "Empty Body"})
+@app.put("/tasks/{id}", summary="update existing task", response_model=TaskBase)
+async def update_task(id: int, update_task: taskUpdate, session: SessionDeps):
+    if update_task.title is None and update_task.done is None:
+        raise HTTPException(status_code=400, detail={"error": "Empty Body"})
 
-    for task in tasks:
-        if task["id"] == id:
-            if new_title is not None and new_title != "":
-                task["title"] = new_title
-
-            if done is not None:
-                task["done"] = done
-
-            return task
-
-    return JSONResponse(status_code=404, content={"error": "unknown id"})
+    db_task = session.get(TaskBase, id)
+    if not db_task:
+        raise HTTPException(status_code=404, detail={"error": "unknown id"})
+    task_data = update_task.model_dump(exclude_unset=True)
+    db_task.sqlmodel_update(task_data)
+    session.add(db_task)
+    session.commit()
+    session.refresh(db_task)
+    return db_task
 
 
 @app.delete("/tasks/{id}", summary="Delete task")
-async def delete_task(id: int):
-    for task in tasks:
-        if task["id"] == id:
-            tasks.remove(task)
-            return JSONResponse(
-                status_code=204, content={"status": "task deleted successfully"}
-            )
+async def delete_task(id: int, session: SessionDeps):
 
-    return JSONResponse(status_code=404, content={"error": "Unknown id"})
+    task = session.get(TaskBase, id)
+    if not task:
+        raise HTTPException(status_code=404, detail={"error": "Unknown id"})
+
+    session.delete(task)
+    session.commit()
+    return {}
