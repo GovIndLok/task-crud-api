@@ -1,12 +1,53 @@
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
+from typing import Annotated
 
-app = FastAPI(title="To-do List")
-tasks = [
-    {"id": 1, "title": "buy bread", "done": True},
-    {"id": 2, "title": "Clean room", "done": False},
-    {"id": 3, "title": "buy milk", "done": True},
-]
+from fastapi import Depends, FastAPI
+from fastapi.responses import JSONResponse
+from sqlmodel import Field, Session, SQLModel, create_engine, select
+
+
+class TaskBase(SQLModel, table=True):
+    id: int | None = Field(index=True, default=None, primary_key=True)
+    title: str | None = Field(index=True)
+    done: bool = Field(default=False)
+
+
+sqlite_file_name = "tasks.db"
+sqlite_url = f"sqlite:///{sqlite_file_name}"
+
+connect_args = {"check_same_thread": False}
+engine = create_engine(sqlite_url, connect_args=connect_args)
+
+
+def create_db_and_table():
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        task_count = len(session.exec(select(TaskBase)).all())
+
+        if task_count == 0:
+            tasks = [
+                TaskBase(id=1, title="buy bread", done=True),
+                TaskBase(id=2, title="Clean room", done=False),
+                TaskBase(id=3, title="buy milk", done=True),
+            ]
+            session.add_all(tasks)
+            session.commit()
+
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+
+@asynccontextmanager
+async def on_startup(app: FastAPI):
+    create_db_and_table()
+    yield
+
+
+SessionDeps = Annotated[Session, Depends(get_session)]
+app = FastAPI(title="To-do List", lifespan=on_startup)
 
 
 @app.get("/", summary="API description")
