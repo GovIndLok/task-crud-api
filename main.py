@@ -1,14 +1,20 @@
 from contextlib import asynccontextmanager
+from dataclasses import field
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Field, Session, SQLModel, create_engine, insert, select
 
 
 class TaskBase(SQLModel, table=True):
     id: int | None = Field(index=True, default=None, primary_key=True)
     title: str | None = Field(index=True)
+    done: bool = Field(default=False)
+
+
+class TaskCreate(SQLModel):
+    title: str | None = field(default=None)
     done: bool = Field(default=False)
 
 
@@ -71,24 +77,20 @@ async def list_task(id: int, session: SessionDeps):
     task = session.exec(select(TaskBase).where(TaskBase.id == id)).first()
     if task:
         return task
-    return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
+    raise HTTPException(status_code=404, detail={"error": f"Task {id} not found"})
 
 
-@app.post("/tasks", summary="Create new tasks")
-async def create_task(title: str):
+@app.post("/tasks", summary="Create new tasks", response_model=TaskBase)
+async def create_task(task: TaskCreate, session: SessionDeps):
 
-    if title is None or title == "":
-        return JSONResponse(
-            status_code=400, content={"Bad request": "title is missing"}
-        )
+    if task.title is None or task.title == "":
+        raise HTTPException(status_code=400, detail={"Bad request": "title is missing"})
+    db_task = TaskBase.model_validate(task)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
 
-    next_id = max((task["id"] for task in tasks), default=0) + 1
-
-    new_task = {"id": next_id, "title": title, "done": False}
-
-    tasks.append(new_task)
-
-    return JSONResponse(status_code=201, content={"status": "done. New task added"})
+    return db_task
 
 
 @app.put("/tasks/{id}", summary="update existing task")
