@@ -60,16 +60,17 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/tasks", summary="List all the tasks")
-async def list_tasks():
+@app.get("/tasks", summary="List all the tasks", response_model=list[TaskBase])
+async def list_tasks(session: SessionDeps):
+    tasks = session.exec(select(TaskBase)).all()
     return tasks
 
 
-@app.get("/tasks/{id}", summary="List a specific task by id")
-async def list_task(id: int):
-    for task in tasks:
-        if task["id"] == id:
-            return task
+@app.get("/tasks/{id}", summary="List a specific task by id", response_model=TaskBase)
+async def list_task(id: int, session: SessionDeps):
+    task = session.exec(select(TaskBase).where(TaskBase.id == id)).first()
+    if task:
+        return task
     return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
 
 
