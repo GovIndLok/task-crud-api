@@ -26,3 +26,29 @@ A lightweight, in-memory RESTful API built with **Python** and **FastAPI** to ma
     uv sync
     uv run uvicorn main:app --reload --port 8000
     ```
+
+---
+
+## Data Exploration
+
+To verify that the database layer independently from FastAPI routes, directly execute query from **DB Browser for SQLite** against `tasks.db`
+
+### Example SQL query
+
+Query:
+
+```SQL
+SELECT * FROM tasks WHERE done = 1;
+```
+
+Output:
+
+```
+Execution finished without errors.
+Result: 3 rows returned in 4ms
+At line 1:
+SELECT * FROM taskbase WHERE done = 1;
+```
+
+Screenshot:
+![DB browser executing sql query](docs/sql_browser_query.png)

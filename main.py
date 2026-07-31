@@ -90,9 +90,9 @@ async def create_task(task: TaskCreate, session: SessionDeps):
     if task.title is None or task.title == "":
         raise HTTPException(status_code=400, detail={"Bad request": "title is missing"})
     db_task = TaskBase.model_validate(task)
-    session.add(task)
+    session.add(db_task)
     session.commit()
-    session.refresh(task)
+    session.refresh(db_task)
 
     return db_task
 
