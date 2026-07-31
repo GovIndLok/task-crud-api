@@ -1,6 +1,20 @@
 # To-Do List CRUD API
 
-A lightweight, in-memory RESTful API built with **Python** and **FastAPI** to manage a simple to-do list. Built as part of the FlyRank Internship Backend Track (Week 2 — Assignment A1) to demonstrate HTTP request-response mechanics, CRUD operations, input validation, proper HTTP status codes, and automatic OpenAPI/Swagger documentation.
+A lightweight RESTful API built with **Python**, **FastAPI** and **SQLite** to manage a simple to-do list. Built as part of the FlyRank Internship Backend Track (Week 3 — Assignment A2) to demonstrate HTTP request-response mechanics, CRUD operations, input validation, proper HTTP status codes, and automatic OpenAPI/Swagger documentation and database layer.
+
+---
+
+## Database Architecture & Persistence
+
+This project use **SQLite** which replace the in-memory list, which would get wiped with every server restart.
+
+### Why SQLite?
+
+* **Zero Overhead:** It's serverless and required no background services to be managed locally.
+* **Portable & lightweight:** Everthing lives in a single file `tasks.db` in project root.
+* **Auto-Initialization:** On Startup, the app check if `tasks.db` exits. If doen't the automatic crates file with table schema and three initial tasks automatically.
+
+> **Note on Version Control:** `tasks.db` is explicitly ignored via `.gitignore`. So when cloning user start with clean database.
 
 ---
 
