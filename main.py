@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from dataclasses import field
 from os import getenv
 from typing import Annotated
 
@@ -15,13 +14,13 @@ class Task(SQLModel, table=True):
 
 
 class TaskCreate(SQLModel):
-    title: str | None = field(default=None)
+    title: str | None = Field(default=None, min_length=1)
     done: bool = Field(default=False)
 
 
 class taskUpdate(SQLModel):
-    title: str | None = field(default=None)
-    done: bool | None = field(default=None)
+    title: str | None = Field(default=None)
+    done: bool | None = Field(default=None)
 
 
 load_dotenv()
@@ -66,23 +65,23 @@ app = FastAPI(title="To-do List", lifespan=on_startup)
 
 
 @app.get("/", summary="API description")
-async def root():
+def root():
     return {"name": "Task API", "version": "1.0", "endpoints": ["/tasks"]}
 
 
 @app.get("/health", summary="API health")
-async def health():
+def health():
     return {"status": "ok"}
 
 
 @app.get("/tasks", summary="List all the tasks", response_model=list[Task])
-async def list_tasks(session: SessionDeps):
+def list_tasks(session: SessionDeps):
     tasks = session.exec(select(Task)).all()
     return tasks
 
 
 @app.get("/tasks/{id}", summary="List a specific task by id", response_model=Task)
-async def list_task(id: int, session: SessionDeps):
+def list_task(id: int, session: SessionDeps):
     task = session.exec(select(Task).where(Task.id == id)).first()
     if task:
         return task
@@ -90,7 +89,7 @@ async def list_task(id: int, session: SessionDeps):
 
 
 @app.post("/tasks", summary="Create new tasks", response_model=Task)
-async def create_task(task: TaskCreate, session: SessionDeps):
+def create_task(task: TaskCreate, session: SessionDeps):
 
     if task.title is None or task.title == "":
         raise HTTPException(status_code=400, detail={"Bad request": "title is missing"})
@@ -103,7 +102,7 @@ async def create_task(task: TaskCreate, session: SessionDeps):
 
 
 @app.put("/tasks/{id}", summary="update existing task", response_model=Task)
-async def update_task(id: int, update_task: taskUpdate, session: SessionDeps):
+def update_task(id: int, update_task: taskUpdate, session: SessionDeps):
     if update_task.title is None and update_task.done is None:
         raise HTTPException(status_code=400, detail={"error": "Empty Body"})
 
@@ -119,7 +118,7 @@ async def update_task(id: int, update_task: taskUpdate, session: SessionDeps):
 
 
 @app.delete("/tasks/{id}", summary="Delete task")
-async def delete_task(id: int, session: SessionDeps):
+def delete_task(id: int, session: SessionDeps):
 
     task = session.get(Task, id)
     if not task:
