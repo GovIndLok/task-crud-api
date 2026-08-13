@@ -1,20 +1,6 @@
 # To-Do List CRUD API
 
-A lightweight RESTful API built with **Python**, **FastAPI** and **SQLite** to manage a simple to-do list. Built as part of the FlyRank Internship Backend Track (Week 3 — Assignment A2) to demonstrate HTTP request-response mechanics, CRUD operations, input validation, proper HTTP status codes, and automatic OpenAPI/Swagger documentation and database layer.
-
----
-
-## Database Architecture & Persistence
-
-This project use **SQLite** which replace the in-memory list, which would get wiped with every server restart.
-
-### Why SQLite?
-
-* **Zero Overhead:** It's serverless and required no background services to be managed locally.
-* **Portable & lightweight:** Everthing lives in a single file `tasks.db` in project root.
-* **Auto-Initialization:** On Startup, the app check if `tasks.db` exits. If doen't the automatic crates file with table schema and three initial tasks automatically.
-
-> **Note on Version Control:** `tasks.db` is explicitly ignored via `.gitignore`. So when cloning user start with clean database.
+A lightweight RESTful API built with **Python**, **FastAPI** to manage a simple to-do list. Built as part of the FlyRank Internship Backend Track. This version upgrades the storage layer to a **PostgreSQL** database running inside a **Docker** container, demonstrating containerized development, environment variable secrets, and multi-container orchestration.
 
 ---
 
@@ -24,6 +10,7 @@ This project use **SQLite** which replace the in-memory list, which would get wi
 
 * **Python 3.10+**
 * [uv](https://github.com/astral-sh/uv) (Python package installer & project manager)
+* [Docker](https://www.docker.com/) and **Docker Compose** (for the PostgreSQL container)
 
 ### Installation & Running
 
@@ -34,18 +21,24 @@ This project use **SQLite** which replace the in-memory list, which would get wi
    cd task-crud-api
     ```
 
-2. **Sync dependencies and start the server:**
+2. **Set up environment variables:**
+Copy the example environment file to set up your local database credentials.
 
-    ```bash
-    uv sync
-    uv run uvicorn main:app --reload --port 8000
-    ```
+```bash
+cp .env.example .env
+```
+
+3. **Start the complete stack:**
+
+```bash
+docker compose up --build
+```
 
 ---
 
 ## Data Exploration
 
-To verify that the database layer independently from FastAPI routes, directly execute query from **DB Browser for SQLite** against `tasks.db`
+To verify that the database layer independently from FastAPI routes, directly execute query from **postgres container**.
 
 ### Example SQL query
 
@@ -63,6 +56,3 @@ Result: 3 rows returned in 4ms
 At line 1:
 SELECT * FROM taskbase WHERE done = 1;
 ```
-
-Screenshot:
-![DB browser executing sql query](docs/sql_browser_query.png)
