@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
 from dataclasses import field
+from os import getenv
 from typing import Annotated
 
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 
-class TaskBase(SQLModel, table=True):
+class Task(SQLModel, table=True):
     id: int | None = Field(index=True, default=None, primary_key=True)
     title: str | None = Field(index=True)
     done: bool = Field(default=False)
@@ -22,24 +24,27 @@ class taskUpdate(SQLModel):
     done: bool | None = field(default=None)
 
 
-sqlite_file_name = "tasks.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+load_dotenv()
 
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+sqlite_url = getenv("DATABASE_URL")
+
+if not sqlite_url:
+    raise ValueError("DATABASE_URL is not set in environment variables or .env file")
+
+engine = create_engine(sqlite_url)
 
 
 def create_db_and_table():
     SQLModel.metadata.create_all(engine)
 
     with Session(engine) as session:
-        task_count = len(session.exec(select(TaskBase)).all())
+        task_count = len(session.exec(select(Task)).all())
 
         if task_count == 0:
             tasks = [
-                TaskBase(id=1, title="buy bread", done=True),
-                TaskBase(id=2, title="Clean room", done=False),
-                TaskBase(id=3, title="buy milk", done=True),
+                Task(id=1, title="buy bread", done=True),
+                Task(id=2, title="Clean room", done=False),
+                Task(id=3, title="buy milk", done=True),
             ]
             session.add_all(tasks)
             session.commit()
@@ -70,26 +75,26 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/tasks", summary="List all the tasks", response_model=list[TaskBase])
+@app.get("/tasks", summary="List all the tasks", response_model=list[Task])
 async def list_tasks(session: SessionDeps):
-    tasks = session.exec(select(TaskBase)).all()
+    tasks = session.exec(select(Task)).all()
     return tasks
 
 
-@app.get("/tasks/{id}", summary="List a specific task by id", response_model=TaskBase)
+@app.get("/tasks/{id}", summary="List a specific task by id", response_model=Task)
 async def list_task(id: int, session: SessionDeps):
-    task = session.exec(select(TaskBase).where(TaskBase.id == id)).first()
+    task = session.exec(select(Task).where(Task.id == id)).first()
     if task:
         return task
     raise HTTPException(status_code=404, detail={"error": f"Task {id} not found"})
 
 
-@app.post("/tasks", summary="Create new tasks", response_model=TaskBase)
+@app.post("/tasks", summary="Create new tasks", response_model=Task)
 async def create_task(task: TaskCreate, session: SessionDeps):
 
     if task.title is None or task.title == "":
         raise HTTPException(status_code=400, detail={"Bad request": "title is missing"})
-    db_task = TaskBase.model_validate(task)
+    db_task = Task.model_validate(task)
     session.add(db_task)
     session.commit()
     session.refresh(db_task)
@@ -97,12 +102,12 @@ async def create_task(task: TaskCreate, session: SessionDeps):
     return db_task
 
 
-@app.put("/tasks/{id}", summary="update existing task", response_model=TaskBase)
+@app.put("/tasks/{id}", summary="update existing task", response_model=Task)
 async def update_task(id: int, update_task: taskUpdate, session: SessionDeps):
     if update_task.title is None and update_task.done is None:
         raise HTTPException(status_code=400, detail={"error": "Empty Body"})
 
-    db_task = session.get(TaskBase, id)
+    db_task = session.get(Task, id)
     if not db_task:
         raise HTTPException(status_code=404, detail={"error": "unknown id"})
     task_data = update_task.model_dump(exclude_unset=True)
@@ -116,7 +121,7 @@ async def update_task(id: int, update_task: taskUpdate, session: SessionDeps):
 @app.delete("/tasks/{id}", summary="Delete task")
 async def delete_task(id: int, session: SessionDeps):
 
-    task = session.get(TaskBase, id)
+    task = session.get(Task, id)
     if not task:
         raise HTTPException(status_code=404, detail={"error": "Unknown id"})
 
